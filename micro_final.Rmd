@@ -1,0 +1,250 @@
+---
+title: "Project Update/Final"
+author: "Tami Ren"
+date: "3/17/2021"
+header-includes:
+  - \usepackage{mathtools}
+  - \DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+  - \usepackage{amssymb}
+output: 
+   html_document:
+    toc: false
+    toc_depth: 3  
+    number_sections: false
+    theme: flatly
+    highlight: tango  
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    code_folding: hide
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set (comment = "#>",
+  fig.align = "center",
+  fig.height = 4,
+  fig.width = 6,
+  # dpi = 300,
+  # cache = T,
+  warning = F,
+  message = F
+)
+
+options(htmltools.dir.version = FALSE)
+pacman::p_load(tidyverse, lubridate, ggplot2, shiny, readr, lubridate, gghighlight, fixest, estimatr, broom,rvest,
+           latex2exp, leaflet, ggplot2, ggthemes, viridis, dplyr, magrittr, knitr, parallel, rddtools, readxl, emoGG, dslabs, gapminder, extrafont, Ecdat, wooldridge, tidyverse, janitor, kableExtra, gridExtra, estimatr, httr, jsonlite)
+
+
+
+
+```
+
+
+```{r data, include=FALSE}
+library(readr)
+car_data <- read_csv("light-duty-vehicles-2021-03-18.csv")
+
+```
+
+
+```{r, cache=FALSE, message=FALSE, include=FALSE}
+manufacturer=car_data %>% group_by(Manufacturer) %>% summarise(`Fuel Code`=n())%>% arrange(desc(`Fuel Code`))
+
+#Ubers entry
+    
+uber_dates <- read_csv("Uber Entry and Exit Dates.csv")
+
+
+
+
+
+```
+
+
+# Two Questions
+
+I've actually developed two questions in conjunction that may or may not be intertwined: 
+
+1) Did car emissions decrease after California's Advanced Clean Cars standards were set in 2015?
+
+2) Is Uber a demand shock for electric vehicles/hybrids?  
+
+
+# Idea 1: 
+
+## Motivation 
+
+The purpose of researching the above question is to find empirical evidence in whether a cap-and-trade market system that connects technological advancements to lower GHG with environmental regulations is causing emissions to decrease. Considering the current status of the environment and global climate change, any evidence on the interaction between markets, innovation, pollution, and regulation would provide better policies for governments to use in their efforts to fight the growing climate problems. 
+
+## Background
+
+The electric vehicle (EV) market is growing, with more manufacturers producing vehicles that can compete with Tesla. What's causing this growth may be a combination of variables, like changes in consumer preferences, worldwide government actions, general technology improvements, and national efforts. In the United States, California has always been a particular leader in enforcing environmental efforts. For example, California's emissions standards require a specific niche gasoline fuel: oil firms complied. Additives in fuel considered toxic were promptly removed at the national level after California banned them. With California announcing that all vehicles in the state will be zero emitters in the next **ten years**, it's likely automakers will comply.
+
+One unique way California's Air Resource Board (CARB) is enforcing their air quality regulations is by using the Zero Emission Vehicle Program, a permit-based system, which is designed to enforce and incentivize automakers to adopt newer, cleaner technologies. The program does this by fining automakers for not generating enough credits from selling automobiles with the low emissions per their standards, or allowing manufacturers to trade among themselves to earn enough credits.  To date, at least 10 states have adopted California's air regulations. Canada has also implemented the program. 
+
+ZEV has existed for 30 years; however, policies enforced by ZEV have evolved. The ZEV program has also changed, including a complete overhaul of the program in 2009 (more on that [here](https://ww2.arb.ca.gov/our-work/programs/zero-emission-vehicle-program/about)). In 2012, CARB adopted the Advanced Clean Cars  (ACC) standards that simplified and increased requirements, including new emission standards that would reduce smog-forming emissions starting with 2015 model year vehicles.  More on that [here](https://ww2.arb.ca.gov/our-work/programs/advanced-clean-cars-program/about)
+
+# Some preliminary evidence
+
+### Car Models 
+
+Designing a new vehicle model takes several years. CARB pushing requirements for new models out 3 to 5 years gives manufacturers time to design vehicles that pass California's requirements. I pulled some data from afdc.energy.gov, which has data on all _low-emission_ car brands and models (including car characteristics). This list is not exhaustive, as it does not include standard gasoline, premium, or diesel vehicles. There are some repetitions of models in the data, as each row includes specific characteristics for that respective model, which may include different engine sizes, or mileage capacities. In other words, Tesla's model Y in 2021 has three rows in the data: one for long range, one for performance, and one for performance with 21" wheels. I elected to keep all of the repetitions as I think it shows how invested manufacturers are in a specific fuel type. 
+
+Graphing the data below, you can see manufacturers stopped producing as many E85 cars, peaking in 2015. More varieties of  electric, hybrid, and plugin-hybrid began to enter the market in 2010, accelerating after 2015. 
+
+``` {r, cache=FALSE}
+
+
+fuel_df = car_data%>% group_by(Manufacturer, `Model Year`, Fuel) %>% summarise('Fuel Code'=n())
+
+fuel_df %>%
+ ggplot() +
+  geom_point(aes(x=`Model Year`, y = `Fuel Code`)) +
+  facet_wrap(~Fuel) +
+       geom_vline(xintercept = 2012, linetype="dotted", 
+                color = "black", size=0.5, alpha=.5) + 
+   geom_vline(xintercept = 2015, linetype="dotted", 
+                color = "red", size=0.5, alpha=1) +
+   theme_bw()+
+  theme(
+    plot.title = element_text(face = "bold", size = 12),
+    legend.background = element_rect(fill = "white", size = 4, colour = "white"),
+    legend.justification = c(0, 1),
+    legend.position = c(0, 1),
+    axis.ticks = element_line(colour = "white", size = 0.1),
+    panel.grid.major = element_line(colour = "white", size = 0.07),
+    panel.grid.minor = element_blank()
+  ) +
+   annotate("text", x = 2018, y=30, label = "New Regulation", size=2)+
+  labs(y="Model Count", x="Year", title = "Model Year by Fuel Type: All Manufacturers")+
+  xlim(1990,2020)
+
+
+
+```
+
+
+If you wanted to look at specific manufacturers, the drop down list will allow you to see the type of car models each manufacturer has produced. Unexpectedly, the larger American brands (GM, Chevrolet, Dodge, Ford) predominately produced E85 vehicles. Every manufacturer who produced E85 saw a reduction in the years after.
+
+
+``` {r, cache=FALSE}
+
+selectizeInput('manu', 'Select Manufacturer', choices = c("choose" = "Ford", manufacturer$Manufacturer))
+
+renderPlot({
+  fuel_df %>%filter(Manufacturer == !!input$manu)%>%
+ ggplot() +
+  geom_point(aes(x=`Model Year`, y = `Fuel Code`)) +
+  facet_wrap(~Fuel) +
+        geom_vline(xintercept = 2012, linetype="dotted", 
+                color = "black", size=0.5, alpha=.5) + 
+   geom_vline(xintercept = 2015, linetype="dotted", 
+                color = "red", size=0.5, alpha=1) +
+   theme_bw()+
+  theme(
+    plot.title = element_text(face = "bold", size = 12),
+    legend.background = element_rect(fill = "white", size = 4, colour = "white"),
+    legend.justification = c(0, 1),
+    legend.position = c(0, 1),
+    axis.ticks = element_line(colour = "white", size = 0.1),
+    panel.grid.major = element_line(colour = "white", size = 0.07),
+    panel.grid.minor = element_blank()
+  ) +
+   annotate("text", x = 2016, y=30, label = "New Regulation", size=2)+
+  labs(y="Model Count", x="Year", title = "Model Year by Fuel Type")+
+      xlim(1990,2020)
+}
+)
+
+
+
+```
+
+It appears that there is something causing manufacturers to shift in producing a type of car that relies on a specific energy source (in this case E(85)) to another type of fuel-based care (electric? gasoline?). Coincidentally, it occurred after the California's new regulations came into effect. 
+
+To study this, I will need to first develop an econometric model to understand how emissions are changing. 
+
+# Data
+
+The EPA provides detailed aggregate data on all manufacturers, carbon dioxide (per mile) by car model year, type, and class. I will use this data starting from 2009 to 2019 to start my analysis. However, I will need to pull state specific data to evaluate the differences across states.  
+
+# Econometric Model
+
+First, I will run a fixed effects model. 
+
+I will evaluate two dependent variables: emissions, $E_{ijt}$ of car type $i$, year $t$, and manufacturer $j$ ,and net ZEV credits $C_{jt}$. The reason to also look at credits as it may be indicate how manufacturers are responding to the regulations.  
+
+$$
+E_{itj} = \tau 1(t>2015) + \delta_t + m_j  + X\beta' + e_{itj} \\
+C_{jts} = \tau 1(t>2015) + \delta_t + m_j  + X\beta' + e_{jts}
+$$ 
+
+
+where $1(t>2015)$ is an indicator variable for all years after the Advanced Clean Cars program took effect, $X\beta'$ are controls for things like global auto market size, and $\delta_t$ and $m_j$ are fixed effects.  Since all manufacturers are "treated" by the regulation and I'm assuming the regulation is exogenously set, I argue that $\tau$ will provide the average treatment effect from California's air regulations. 
+
+The next step will then to evaluate emission differences across states by using a difference in difference model.  This time, I will compare states that have adopted California's ZEV program versus non- ZEV states. Treatment is assumed to be exogenous. States that adopted ZEV are likely correlated and hence aren't "randomly treated." This may be problematic in terms of estimating $\tau$. That is, $\hat{\tau}$ may be biased, which I will work on addressing: 
+
+$E_{itjs} = \alpha+ \beta ZEV_s + \tau ZEV_s*post_{t} + \delta_t + \nu_j + \phi_s +  X\beta' + e_{itjs}$  where $post_t$ is a dummy variable for after the regulation took effect
+
+Because non-ZEV states would have all 0s for credits, I refrain from estimating a DID model with credits. 
+
+Furthermore, I will cluster standard errors with respect to states. 
+
+# Technology Investments 
+
+I would also like to evaluate whether environmental patents and firm level R&D expenditure leading up to 2015 (since it takes a few years to design a car) increased. For example, if R&D expenditure or patents spiked right after 2012, increasing until 2015, I think this would provide some evidence that auto manufacturers were preparing for the regulations. As of now I do not have data, but supposing I did, I would first apply a fixed effects model: 
+
+$RD_{tj} = \alpha + \tau 1(t>A) + \delta_t + m_j  + X\beta' + e_{tj}$ where $RD_{tj}$ is the R&D expenditure and $A$ is the year the announcement took place. S
+
+This will provide further evidence in how California impacts innovation of the automobile industry. 
+
+#  Conclusion
+
+These two models will be the primary way I will start estimating how emissions changed as a result of California's policies and will provide a great start to understanding how California's policies are impacting overall air quality. 
+
+# Idea 2 - Is Uber a demand shock for electric vehicles/hybrids?
+
+In 2012, Uber entered its first market. Since then Uber has grown into an international phenomena, as it arguably allows more flexibility for individuals to earn additional income. Individuals who drive for Uber I assume then act and behave like any rational business: they maximize profits. One way Uber drivers might be maximizing their business is by purchasing hybrid/electric cars. I hypothesize that as Uber entered different US markets, electric vehicle sales increased. 
+
+A paper published in the Journal of Urban Economics in 2018, ["Is Uber a substitute or complement for public transit"](https://www.sciencedirect.com/science/article/pii/S0094119018300731)showed that Uber is a complement for public transportation, increasing ridership by 5% after only 2 years. This paper also provides their data for free, which I used to see how Uber entered different cities and states. The graph below is an aggregate of all the markets Uber entered over time: 
+
+```{r}
+
+
+uber_dates$dates= replace(uber_dates$`Date Entered-Official`,  uber_dates$`Date Entered-Official` == '?',NA)
+
+  uber_dates =uber_dates%>%
+     filter(!is.na(dates)) %>% 
+     mutate( dates = dmy(dates))%>% 
+       group_by(State,dates) %>% 
+     summarise(`Uber Type`=n()) %>% 
+     ungroup() %>%
+     complete(dates = full_seq(dates, 1), 
+                      nesting(State), 
+                       fill = list(`Uber Type` = 0))
+  
+ uber_dates = uber_dates %>% group_by (dates=floor_date(dates, "year"))%>% summarise(markets= sum(`Uber Type`))
+
+
+uber_dates %>%
+ggplot() +
+  geom_line(aes(x=dates, y=markets))+
+  labs(title = "Uber Market Entry Date", y="Total Markets", x="Date")
+
+```
+
+I would like to actually explore this topic more. I think I could apply a difference-in-difference estimation. Since Uber's entry to cities have been linked to population size, I would control for population. 
+
+$EH_{ct} = \alpha + \beta Uber_{ct} + \tau Uber_{ct}*post_t +  \delta_t + \nu_j +  X\beta' + e_{ct}$,
+
+- $EH_{ct}$ is the Electric/Hybrid sales for the city each month
+- $nu_j$ is city fixed effects. Depending on how many cities, this may be problematic in terms of dimensions.
+
+
+# Conclusion 
+
+There is a lot more I could do and say about the above ideas. With time constraints, I'm limited to what I've provided. The idea on how manufactures respond to California's regulations would provide great insight into innovation, regulation, and firm behavior. From a demand side, Uber's impact on vehicle demand could be one way we can explain why we're seeing a strong growth of electric vehicles.
+
+
+**Note**: For clarification, my paper for Industrial Organization will be to estimate a Nash Perfect Equilibrium in a stochastic dynamic game with respect to imperfect competition, R&D/innovation, and the ZEV program following the model by Ericson & Pakes (1995). 
